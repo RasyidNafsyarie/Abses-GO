@@ -103,7 +103,7 @@
             "<td>" + (item.nis || "-") + "</td>" +
             "<td>" + (item.nama || "-") + "</td>" +
             "<td>" + (item.kelas || "-") + "</td>" +
-            "<td>" + (item.waktu_hadir || item.waktu || "-") + "</td>";
+            "<td>" + UI.formatWIB(item.waktu_hadir || item.waktu) + "</td>";
           tbody.appendChild(tr);
         });
       })
@@ -137,8 +137,8 @@
             "<td>" + (item.nis || "-") + "</td>" +
             "<td>" + (item.nama || "-") + "</td>" +
             "<td>" + (item.kelas || "-") + "</td>" +
-            "<td>" + (item.tanggal_hadir || item.tanggal || "-") + "</td>" +
-            "<td>" + (item.waktu_hadir || item.waktu || "-") + "</td>";
+            "<td>" + UI.formatTanggalId(item.tanggal_hadir || item.tanggal) + "</td>" +
+            "<td>" + UI.formatWIB(item.waktu_hadir || item.waktu) + "</td>";
           tbody.appendChild(tr);
         });
       })
@@ -170,8 +170,8 @@
             "<td>" + (item.nis || "-") + "</td>" +
             "<td>" + (item.nama || "-") + "</td>" +
             "<td>" + (item.kelas || "-") + "</td>" +
-            "<td>" + (item.tanggal_hadir || item.tanggal || "-") + "</td>" +
-            "<td>" + (item.waktu_hadir || item.waktu || "-") + "</td>";
+            "<td>" + UI.formatTanggalId(item.tanggal_hadir || item.tanggal) + "</td>" +
+            "<td>" + UI.formatWIB(item.waktu_hadir || item.waktu) + "</td>";
           tbody.appendChild(tr);
         });
       })

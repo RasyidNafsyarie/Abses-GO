@@ -61,13 +61,44 @@
     }
   });
 
+  // ---------- Format waktu WIB ----------
+  // String datetime dari server (mis. "2026-08-11 17:59:24") adalah waktu lokal WIB.
+  // Ditampilkan sebagai "HH:MM WIB".
+  function formatWIB(datetimeStr) {
+    if (!datetimeStr) return "-";
+    var s = String(datetimeStr);
+    // Ambil bagian jam:menit dari "YYYY-MM-DD HH:MM:SS" atau "YYYY-MM-DDTHH:MM:SS"
+    var m = s.match(/(\d{2}):(\d{2})/);
+    if (m) return m[1] + ":" + m[2] + " WIB";
+    return s;
+  }
+
+  // Format tanggal Indonesia: "Senin, 11 Agustus 2026"
+  function formatTanggalId(dateStr) {
+    if (!dateStr) return "-";
+    var s = String(dateStr).slice(0, 10); // YYYY-MM-DD
+    var parts = s.split("-");
+    if (parts.length !== 3) return s;
+    var bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    var b = parseInt(parts[1], 10) - 1;
+    var nama = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    try {
+      var d = new Date(parts[0], b, parts[2]);
+      return nama[d.getDay()] + ", " + parseInt(parts[2], 10) + " " + (bulan[b] || "") + " " + parts[0];
+    } catch (e) {
+      return s;
+    }
+  }
+
   // Expose API global
   window.UI = {
     toast: showToast,
     showToast: showToast,
     openModal: openModal,
     closeModal: closeModal,
-    initIcons: initIcons
+    initIcons: initIcons,
+    formatWIB: formatWIB,
+    formatTanggalId: formatTanggalId
   };
 
   document.addEventListener("DOMContentLoaded", initIcons);

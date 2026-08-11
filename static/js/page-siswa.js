@@ -511,8 +511,8 @@
           var tr = document.createElement("tr");
           tr.innerHTML =
             "<td>" + (i + 1) + "</td>" +
-            "<td>" + (item.tanggal_hadir || item.tanggal || "-") + "</td>" +
-            "<td>" + (item.waktu_hadir || item.waktu || "-") + "</td>" +
+            "<td>" + UI.formatTanggalId(item.tanggal_hadir || item.tanggal) + "</td>" +
+            "<td>" + UI.formatWIB(item.waktu_hadir || item.waktu) + "</td>" +
             '<td><span class="badge badge-success">Hadir</span></td>';
           tbody.appendChild(tr);
         });

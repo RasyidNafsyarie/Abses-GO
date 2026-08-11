@@ -588,6 +588,40 @@ p { color: var(--text-muted); }
   }
 }
 
+/* Responsif tabel di layar sempit: semua kolom tetap muat tanpa potong */
+@media (max-width: 640px) {
+  .table-wrap {
+    overflow-x: hidden; /* jangan scroll keluar kartu */
+  }
+
+  .table {
+    table-layout: fixed; /* kolom dibagi proporsional, tidak meluap */
+    width: 100%;
+    font-size: 0.72rem;
+  }
+
+  .table th, .table td {
+    padding: 6px 4px;
+    font-size: 0.7rem;
+    white-space: normal; /* teks panjang wrap, tidak terpotong */
+    overflow-wrap: break-word;
+    word-break: break-word;
+    vertical-align: top;
+  }
+
+  .table th {
+    font-size: 0.62rem;
+    padding: 6px 4px;
+  }
+
+  .table .empty {
+    white-space: normal;
+  }
+}
+
+/* Pastikan halaman tidak ikut scroll horizontal karena konten lebar */
+body { overflow-x: hidden; }
+
 /* Sembunyikan teks brand di layar sangat sempit agar header tidak meluap */
 @media (max-width: 340px) {
   .brand > span:last-child { display: none; }
