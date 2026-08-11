@@ -43,12 +43,12 @@ CREATE TABLE IF NOT EXISTS absensi (
 );
 
 -- ---------- Data Contoh (seed) ----------
--- Password ini disimpan plaintext sesuai logika login di app saat ini.
--- Hapus/ubah sesuai kebutuhan sebelum dipakai produksi.
+-- Password sudah di-hash bcrypt (isi: 1234). Untuk membuat hash baru:
+--   python -c "import bcrypt; print(bcrypt.hashpw(b'password', bcrypt.gensalt()).decode())"
 INSERT INTO siswa (NIS, Nama, Jurusan, Kelas, Username, Password) VALUES
-('123456', 'Budi Santoso', 'RPL', 'XII RPL 1', 'budi', '1234'),
-('123457', 'Siti Aminah', 'TKJ', 'XI TKJ 2', 'siti', '1234');
+('123456', 'Budi Santoso', 'RPL', 'XII RPL 1', 'budi', '$2b$12$5qC9k8xxUg7NL6Uzhra.1uCXRxGOQiPNFOjeL7OLBQK49jClk.wfS'),
+('123457', 'Siti Aminah', 'TKJ', 'XI TKJ 2', 'siti', '$2b$12$5qC9k8xxUg7NL6Uzhra.1uCXRxGOQiPNFOjeL7OLBQK49jClk.wfS');
 
 INSERT INTO guru (Username, Password) VALUES
-('pakdoni', '1234'),
-('buindah', '1234');
+('pakdoni', '$2b$12$5qC9k8xxUg7NL6Uzhra.1uCXRxGOQiPNFOjeL7OLBQK49jClk.wfS'),
+('buindah', '$2b$12$5qC9k8xxUg7NL6Uzhra.1uCXRxGOQiPNFOjeL7OLBQK49jClk.wfS');

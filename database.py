@@ -2,6 +2,7 @@ import os
 import sys
 import mysql.connector
 from datetime import date, datetime 
+import bcrypt
 
 # Pastikan stdout mendukung karakter unicode (emoji) di semua platform
 if hasattr(sys.stdout, "reconfigure"):
@@ -111,17 +112,32 @@ def get_absen_by_nis(nis):
 
 # --- FUNGSI SISWA ---
 
+def _verify_password(plain, stored):
+    """Cocokkan password. Mendukung bcrypt ($2b$) dan plaintext (data lama)."""
+    if not stored:
+        return False
+    try:
+        if stored.startswith("$2"):
+            return bcrypt.checkpw(plain.encode("utf-8"), stored.encode("utf-8"))
+    except Exception:
+        pass
+    # Fallback: data lama masih plaintext
+    return stored == plain
+
 def get_siswa(username, password):
     """Mencari data siswa berdasarkan username dan password untuk login."""
     conn = connect_db("dbsekolah")
     if not conn: return None
 
     cursor = conn.cursor(dictionary=True)
-    query = "SELECT * FROM siswa WHERE Username = %s AND Password = %s"
-    cursor.execute(query, (username, password))
+    query = "SELECT * FROM siswa WHERE Username = %s"
+    cursor.execute(query, (username,))
     result = cursor.fetchone()
     conn.close()
-    return result
+
+    if result and _verify_password(password, result.get("Password")):
+        return result
+    return None
     
 def get_siswa_by_nis(nis):
     """Ambil data siswa berdasarkan NIS."""
@@ -151,11 +167,14 @@ def get_guru(username, password):
     if not conn: return None
     
     cursor = conn.cursor(dictionary=True)
-    query = "SELECT * FROM guru WHERE Username = %s AND Password = %s"
-    cursor.execute(query, (username, password))
+    query = "SELECT * FROM guru WHERE Username = %s"
+    cursor.execute(query, (username,))
     result = cursor.fetchone()
     conn.close()
-    return result
+
+    if result and _verify_password(password, result.get("Password")):
+        return result
+    return None
 
 # --- FUNGSI FACE DATA (verifikasi wajah) ---
 

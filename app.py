@@ -203,12 +203,14 @@ def siswa():
 
 @app.route('/guru')
 def halaman_guru():
+    if not session.get('guru'):
+        return redirect(url_for('index'))
     return render_template('guru.html')
 
-# Endpoint ini tidak lagi diperlukan karena sudah ada yang lebih spesifik,
-# tapi tetap dipertahankan sesuai permintaan.
 @app.route('/api/history', methods=['GET'])
 def get_history():
+    if not session.get('guru'):
+        return jsonify({'status': 'error', 'message': 'Akses khusus guru'}), 403
     try:
         data = get_all_absen()  # mengambil dari database
         return jsonify({'status': 'success', 'data': data}), 200
@@ -216,36 +218,11 @@ def get_history():
         print(f"[ERROR get_history] {str(e)}")
         return jsonify({'status': 'error', 'message': 'Gagal mengambil data absensi'}), 500
 
-@app.route('/api/history-today', methods=['GET'])
-def get_today_history():
-    try:
-        today_data = get_today_absen()
-        
-        normalized_data = [
-            {
-                'nis': row['nis'],
-                'nama_siswa': row['nama'],
-                'jurusan': row['jurusan'],
-                'kelas': row['kelas'],
-                'tanggal': row['tanggal_hadir'],
-                'waktu': row['waktu_hadir']
-            }
-            for row in today_data
-        ]
-
-        return jsonify({
-            "success": True,
-            "data": normalized_data
-        }), 200
-    except Exception as e:
-        print(f"[ERROR] Gagal ambil history today: {e}")
-        return jsonify({
-            "success": False,
-            "message": "Gagal mengambil data absensi hari ini"
-        }), 500
-
 @app.route('/api/history/<nis>', methods=['GET'])
 def get_history_by_nis(nis):
+    # Siswa hanya boleh lihat riwayatnya sendiri; guru boleh lihat semua
+    if session.get('nis') != nis and not session.get('guru'):
+        return jsonify({'status': 'error', 'message': 'Tidak diizinkan'}), 403
     try:
         history_data = get_absen_by_nis(nis)
         for row in history_data:
@@ -260,17 +237,15 @@ def get_history_by_nis(nis):
 @app.route('/scan-absen', methods=['POST'])
 def scan_absen():
     try:
-        data = request.get_json()
-        print("[DEBUG] Data diterima dari frontend:", data)
+        data = request.get_json(silent=True) or {}
         nis = data.get('nis')  # menerima NIS dari frontend/session
-        print("[DEBUG] NIS diterima:", nis)
 
         if not nis:
-            return jsonify({'status': 'error', 'message': 'NIS tidak ditemukan.'}), 400
+            return jsonify({'success': False, 'message': 'NIS tidak ditemukan.'}), 400
 
         siswa = get_siswa_by_nis(nis)
         if not siswa:
-            return jsonify({'status': 'error', 'message': f'Siswa dengan NIS {nis} tidak terdaftar.'}), 404
+            return jsonify({'success': False, 'message': f'Siswa dengan NIS {nis} tidak terdaftar.'}), 404
 
         # ✅ Gunakan .get() agar fleksibel terhadap nama kolom (NIS/nis)
         nis_siswa = siswa.get('nis') or siswa.get('NIS')
@@ -280,7 +255,7 @@ def scan_absen():
 
         # ⚠ Validasi jika ada data kosong
         if not all([nis_siswa, nama_siswa, jurusan_siswa, kelas_siswa]):
-            return jsonify({'status': 'error', 'message': 'Data siswa tidak lengkap di database.'}), 500
+            return jsonify({'success': False, 'message': 'Data siswa tidak lengkap di database.'}), 500
 
         # ✅ Proses insert absen
         berhasil = insert_absen(
@@ -291,35 +266,23 @@ def scan_absen():
         )
 
         if berhasil:
-            return jsonify({'status': 'success', 'message': f"Absensi untuk {nama_siswa} berhasil."}), 200
+            return jsonify({'success': True, 'message': f"Absensi untuk {nama_siswa} berhasil."}), 200
         else:
-            return jsonify({'status': 'conflict', 'message': f"{nama_siswa} sudah tercatat absen hari ini."}), 409
+            return jsonify({'success': False, 'message': f"{nama_siswa} sudah tercatat absen hari ini.", 'conflict': True}), 409
 
     except Exception as e:
         print(f"[ERROR] {str(e)}")
-        return jsonify({'status': 'error', 'message': 'Terjadi kesalahan pada server.'}), 500
-    
-@app.route('/absen-otomatis')
-def absen_otomatis():
-    nis = request.args.get('nis')
-    if not nis or not nis.isdigit():
-        return "NIS tidak valid", 400
-    
-    siswa = get_siswa_by_nis(nis)
-    if not siswa:
-        return f"Siswa dengan NIS {nis} tidak terdaftar.", 404
-
-    return render_template('absen_otomatis.html', nis=nis)
+        return jsonify({'success': False, 'message': 'Terjadi kesalahan pada server.'}), 500
 
 @app.route('/api/login-siswa', methods=['POST'])
 def login_siswa():
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         username = data.get('username')
         password = data.get('password')
 
         if not username or not password:
-            return jsonify({"error": "Username dan password wajib diisi"}), 400
+            return jsonify({"success": False, "message": "Username dan password wajib diisi"}), 400
 
         siswa = get_siswa(username, password)
         if siswa:
@@ -327,7 +290,7 @@ def login_siswa():
             nama_siswa = siswa.get('Nama') or siswa.get('nama')
 
             if not nis_siswa:
-                return jsonify({"error": "Struktur data salah: kolom NIS tidak ada."}), 500
+                return jsonify({"success": False, "message": "Struktur data salah: kolom NIS tidak ada."}), 500
 
             # ✅ Simpan ke session agar halaman /siswa tahu siapa yang login
             session['nis'] = nis_siswa
@@ -342,20 +305,20 @@ def login_siswa():
                 "nama": nama_siswa
             }), 200
         else:
-            return jsonify({"error": "Username atau password salah"}), 401
+            return jsonify({"success": False, "message": "Username atau password salah"}), 401
             
     except Exception as e:
-        return jsonify({"error": f"Terjadi kesalahan saat login: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Terjadi kesalahan saat login: {str(e)}"}), 500
 
 @app.route('/api/login-guru', methods=['POST'])
 def login_guru():
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         username = data.get('username')
         password = data.get('password')
 
         if not username or not password:
-            return jsonify({"error": "Username dan password wajib diisi"}), 400
+            return jsonify({"success": False, "message": "Username dan password wajib diisi"}), 400
 
         guru = get_guru(username, password)
         if guru:
@@ -368,12 +331,14 @@ def login_guru():
                 "user": guru_user
             })
         else:
-            return jsonify({"error": "Username atau password salah"}), 401
+            return jsonify({"success": False, "message": "Username atau password salah"}), 401
     except Exception as e:
-        return jsonify({"error": f"Terjadi kesalahan saat login: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Terjadi kesalahan saat login: {str(e)}"}), 500
     
 @app.route('/api/history-guru-today', methods=['GET'])
 def get_history_guru_today():
+    if not session.get('guru'):
+        return jsonify({"success": False, "message": "Akses khusus guru"}), 403
     try:
         data = get_today_absen()
         # Selalu konversi datetime ke string untuk JSON
@@ -548,55 +513,6 @@ def face_list():
 
     data = get_all_face_status()
     return jsonify({"success": True, "data": data}), 200
-
-# Fungsi-fungsi ini didefinisikan di sini dalam file lama Anda.
-# Idealnya, fungsi-fungsi ini seharusnya hanya ada di `database.py`.
-# Namun, saya tetap mempertahankannya sesuai permintaan Anda.
-
-def get_siswa_by_nis(nis):
-    """Ambil data siswa berdasarkan NIS."""
-    conn = connect_db("dbsekolah")
-    if not conn:
-        return None
-
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM siswa WHERE NIS = %s", (nis,))
-        result = cursor.fetchone()
-        return result
-    except Exception as e:
-        print(f"Error ambil siswa: {e}")
-        return None
-    finally:
-        if conn.is_connected():
-            cursor.close()
-            conn.close()
-
-def get_all_absen_local():
-    """Ambil SEMUA absensi siswa dari database"""
-    conn = connect_db("dbsekolah")
-    if not conn:
-        return []
-
-    cursor = conn.cursor(dictionary=True)
-    query = "SELECT * FROM absensi ORDER BY tanggal_hadir DESC, id DESC"
-    cursor.execute(query)
-    result = cursor.fetchall()
-    conn.close()
-    return result
-
-def get_absen_by_nis_local(nis):
-    """Ambil semua absensi untuk satu siswa berdasarkan NIS"""
-    conn = connect_db("dbsekolah")
-    if not conn:
-        return []
-
-    cursor = conn.cursor(dictionary=True)
-    query = "SELECT * FROM absensi WHERE nis=%s ORDER BY tanggal_hadir DESC, id DESC"
-    cursor.execute(query, (nis,))
-    result = cursor.fetchall()
-    conn.close()
-    return result
 
 if __name__ == '__main__' :
     local_ip = get_local_ip()

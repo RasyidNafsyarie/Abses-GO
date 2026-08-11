@@ -83,7 +83,7 @@
           if (isSiswa && data.nama) sessionStorage.setItem(NAME_KEY, data.nama);
           window.location.href = isSiswa ? "/siswa" : "/guru";
         } else {
-          setNote(role, "error", data.error || "Login gagal");
+          setNote(role, "error", data.message || data.error || "Login gagal");
           setLoading(role, false);
         }
       })

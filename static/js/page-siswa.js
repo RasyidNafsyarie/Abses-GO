@@ -437,10 +437,10 @@
         // Hentikan kamera: QR sudah terproses, jangan scan ulang terus-menerus
         stopQrScanner();
 
-        if (data.status === "success") {
+        if (data.success === true) {
           setScanStatus("success", data.message || "Absen berhasil");
           UI.toast("success", "Absensi berhasil dicatat");
-        } else if (data.status === "conflict") {
+        } else if (data.conflict === true) {
           setScanStatus("warning", data.message || "Sudah absen hari ini");
           UI.toast("warning", "Anda sudah absen hari ini");
         } else {
@@ -480,8 +480,8 @@
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (data.status === "success") UI.toast("success", data.message || "Absen berhasil");
-        else if (data.status === "conflict") UI.toast("warning", data.message || "Sudah absen hari ini");
+        if (data.success === true) UI.toast("success", data.message || "Absen berhasil");
+        else if (data.conflict === true) UI.toast("warning", data.message || "Sudah absen hari ini");
         else UI.toast("error", data.message || "Gagal absen");
         loadRiwayat();
       })
