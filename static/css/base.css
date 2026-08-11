@@ -555,6 +555,44 @@ p { color: var(--text-muted); }
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 
+/* ---------- Responsif layar kecil (mobile) ---------- */
+@media (max-width: 420px) {
+  /* Header: brand + aksi tetap satu baris, hindari wrap ke bawah */
+  .app-header .container {
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+  }
+
+  .brand { font-size: 0.9rem; }
+  .brand-mark { width: 28px; height: 28px; font-size: 0.75rem; }
+
+  /* Grup kanan header: jangan wrap, ukuran lebih ringkas */
+  .app-header .container > .flex {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+  }
+
+  .app-header .user-chip {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    gap: var(--space-1);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-header .btn-sm {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Sembunyikan teks brand di layar sangat sempit agar header tidak meluap */
+@media (max-width: 340px) {
+  .brand > span:last-child { display: none; }
+}
+
 /* ---------- Aksesibilitas ---------- */
 :focus-visible {
   outline: 2px solid var(--accent);
