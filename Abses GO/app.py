@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from dotenv import load_dotenv
 import json
 import os
 import uuid
@@ -9,11 +10,14 @@ import ssl
 from werkzeug.serving import make_ssl_devcert
 from database import connect_db, insert_absen, get_siswa, get_guru, get_today_absen, get_siswa_by_nis, get_absen_by_nis, get_all_absen
 
+# Load variabel dari file .env (jika ada)
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = 'supersecretkey123!@#'
-DATA_FILE = 'data/absensi.json'
-CERT_FILE = 'cert.pem'
-KEY_FILE = 'key.pem'
+app.secret_key = os.getenv('SECRET_KEY', 'supersecretkey123!@#')
+DATA_FILE = os.getenv('DATA_FILE', 'data/absensi.json')
+CERT_FILE = os.getenv('CERT_FILE', 'cert.pem')
+KEY_FILE = os.getenv('KEY_FILE', 'key.pem')
 valid_tokens = {}
 
 # Pastikan folder data ada
@@ -86,7 +90,6 @@ DNS.1 = localhost
 IP.1 = 127.0.0.1
 IP.2 = {local_ip}
 """
-        
         with open('ssl.conf', 'w') as f:
             f.write(config_content)
         
@@ -458,9 +461,9 @@ if __name__ == '__main__' :
     try:
         context = (CERT_FILE, KEY_FILE)
         app.run(
-            debug=True,
+            debug=os.getenv('FLASK_DEBUG', 'True').lower() == 'true',
             host='0.0.0.0',
-            port=5000,
+            port=int(os.getenv('FLASK_PORT', 5000)),
             ssl_context=context
         )
         

@@ -1,0 +1,54 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ===== Virtual Environment =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== Data & Runtime =====
+# Data absensi dibuat otomatis saat aplikasi dijalankan
+data/absensi.json
+data/*.json
+*.log
+
+# ===== SSL Certificate (dibuat otomatis oleh app.py) =====
+cert.pem
+key.pem
+ssl_cert.crt
+ssl_cert.key
+ssl.conf
+
+# ===== Environment Variables =====
+.env
+.env.*
+!.env.example
+
+# ===== Command Code =====
+.commandcode/
+
+# ===== IDE / Editor =====
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== File Temporary =====
+tempCodeRunnerFile.py
+
+# ===== Testing / Cache =====
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/

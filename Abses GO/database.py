@@ -1,12 +1,13 @@
+import os
 import mysql.connector
 from datetime import date, datetime 
 
 def connect_db(dbsekolah):
     try:
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
+            host=os.getenv('DB_HOST', 'localhost'),
+            user=os.getenv('DB_USER', 'root'),
+            password=os.getenv('DB_PASSWORD', ''),
             database=dbsekolah
         )
         print(f"✅ Koneksi ke {dbsekolah} berhasil!")
