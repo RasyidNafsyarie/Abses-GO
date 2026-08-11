@@ -191,7 +191,7 @@ def siswa():
     kelas = session.get('kelas')
 
     if not nis:
-        return redirect(url_for('login'))
+        return redirect(url_for('index'))
 
     return render_template(
         'siswa.html',

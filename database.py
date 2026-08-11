@@ -1,6 +1,19 @@
 import os
+import sys
 import mysql.connector
 from datetime import date, datetime 
+
+# Pastikan stdout mendukung karakter unicode (emoji) di semua platform
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 def connect_db(dbsekolah):
     try:

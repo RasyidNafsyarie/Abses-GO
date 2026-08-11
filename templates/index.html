@@ -1,90 +1,65 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Sistem Absensi Sekolah</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-  <div class="background-shapes">
-    <div class="shape"></div>
-    <div class="shape"></div>
-    <div class="shape"></div>
-    <div class="shape"></div>
-  </div>
+{% extends "base.html" %}
 
-  <div class="container fade-in" id="roleSelection">
-    <div class="logo">
-      <i class="fas fa-school"></i>
-    </div>
-    <h1>Sistem Absensi Sekolah</h1>
-    <h2>Selamat Datang</h2>
-    <p>Pilih peran untuk melanjutkan</p>
-    <button class="btn btn-primary role-button" onclick="selectRole('siswa')">
-      <i class="fas fa-user-graduate"></i>
-      <span>Siswa</span>
-    </button>
-    <button class="btn btn-success role-button" onclick="selectRole('guru')">
-      <i class="fas fa-chalkboard-teacher"></i>
-      <span>Guru</span>
-    </button>
-  </div>
+{% block title %}Masuk — Absensi GO{% endblock %}
 
-  <!-- Login Siswa -->
-  <div class="container slide-up" id="loginSectionSiswa" style="display:none;">
-    <div class="logo">
-      <i class="fas fa-user-graduate"></i>
+{% block body %}
+<div class="auth-page">
+  <main class="auth-card card fade-in">
+    <div class="brand auth-brand">
+      <span class="brand-mark" data-lucide="graduation-cap"></span>
+      <span>Absensi GO</span>
     </div>
-    <h2>Login Siswa</h2>
-    <form id="formLoginSiswa">
-      <div class="input-group">
-        <i class="fas fa-user"></i>
-        <input type="text" id="usernameSiswa" placeholder="Nama Siswa" required>
-      </div>
-      <div class="input-group">
-        <i class="fas fa-lock"></i>
-        <input type="password" id="passwordSiswa" placeholder="Password" required>
-      </div>
-      <button type="button" class="btn btn-primary" onclick="loginSiswa()">
-        <i class="fas fa-sign-in-alt"></i> Login
+
+    <div class="auth-head">
+      <h1>Masuk</h1>
+      <p>Pilih peran untuk melanjutkan</p>
+    </div>
+
+    <!-- Role selection -->
+    <div class="role-tabs" role="tablist" aria-label="Pilih peran">
+      <button type="button" id="tab-siswa" class="role-tab" role="tab" aria-selected="true" onclick="LoginApp.selectRole('siswa')">
+        <i data-lucide="user-round"></i> Siswa
       </button>
-      <button type="button" class="btn btn-secondary" onclick="showRoleSelection()">
-        <i class="fas fa-arrow-left"></i> Kembali
+      <button type="button" id="tab-guru" class="role-tab" role="tab" aria-selected="false" onclick="LoginApp.selectRole('guru')">
+        <i data-lucide="users"></i> Guru
       </button>
+    </div>
+
+    <!-- Login siswa -->
+    <form id="form-siswa" class="auth-form" onsubmit="LoginApp.submit(event, 'siswa')" novalidate>
+      <div class="field">
+        <label for="username-siswa">Nama / Username</label>
+        <input type="text" id="username-siswa" class="input" placeholder="contoh: budi" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password-siswa">Password</label>
+        <input type="password" id="password-siswa" class="input" placeholder="••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" id="btn-login-siswa" class="btn btn-primary btn-block">Masuk sebagai Siswa</button>
+      <p class="form-note" id="note-siswa"></p>
     </form>
-    <div id="loginErrorSiswa" class="error-message" style="display:none;"></div>
-  </div>
 
-  <!-- Login Guru -->
-  <div class="container slide-up" id="loginSectionGuru" style="display:none;">
-    <div class="logo">
-      <i class="fas fa-chalkboard-teacher"></i>
-    </div>
-    <h2>Login Guru</h2>
-    <form id="formLoginGuru">
-      <div class="input-group">
-        <i class="fas fa-user"></i>
-        <input type="text" id="usernameGuru" placeholder="Username" required>
+    <!-- Login guru -->
+    <form id="form-guru" class="auth-form hidden" onsubmit="LoginApp.submit(event, 'guru')" novalidate>
+      <div class="field">
+        <label for="username-guru">Username</label>
+        <input type="text" id="username-guru" class="input" placeholder="contoh: pakdoni" autocomplete="username" required>
       </div>
-      <div class="input-group">
-        <i class="fas fa-lock"></i>
-        <input type="password" id="passwordGuru" placeholder="Password" required>
+      <div class="field">
+        <label for="password-guru">Password</label>
+        <input type="password" id="password-guru" class="input" placeholder="••••••" autocomplete="current-password" required>
       </div>
-      <button type="button" class="btn btn-success" onclick="loginGuru()">
-        <i class="fas fa-sign-in-alt"></i> Login
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="showRoleSelection()">
-        <i class="fas fa-arrow-left"></i> Kembali
-      </button>
+      <button type="submit" id="btn-login-guru" class="btn btn-primary btn-block">Masuk sebagai Guru</button>
+      <p class="form-note" id="note-guru"></p>
     </form>
-    <div id="loginErrorGuru" class="error-message" style="display:none;"></div>
-    <div class="login-info">
-      <small><i class="fas fa-info-circle"></i> Demo: Username: admin, Password: admin</small>
-    </div>
-  </div>
 
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-</body>
-</html>
+    <footer class="auth-foot">
+      <p>Akun demo — Siswa: <code>budi</code>/<code>1234</code> · Guru: <code>pakdoni</code>/<code>1234</code></p>
+    </footer>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}
