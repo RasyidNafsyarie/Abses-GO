@@ -18,6 +18,8 @@ ENV/
 # Data absensi dibuat otomatis saat aplikasi dijalankan
 data/absensi.json
 data/*.json
+# Data pribadi: foto wajah siswa (jangan pernah di-commit)
+data/faces/
 *.log
 
 # ===== SSL Certificate (dibuat otomatis oleh app.py) =====
