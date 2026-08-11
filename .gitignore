@@ -35,6 +35,9 @@ ssl.conf
 # ===== Command Code =====
 .commandcode/
 
+# ===== Dokumen Refactor (perencanaan, bukan produk) =====
+refactor.md
+
 # ===== IDE / Editor =====
 .idea/
 .vscode/
