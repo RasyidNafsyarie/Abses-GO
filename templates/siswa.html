@@ -48,7 +48,19 @@
         <span class="badge badge-neutral">Kamera</span>
       </div>
       <div class="scanner-box">
-        <div id="reader"></div>
+        <div class="scanner-frame" id="scanner-frame">
+          <div id="reader" class="scanner-video"></div>
+          <div class="scanner-placeholder" id="scanner-placeholder">
+            <i data-lucide="camera-off"></i>
+            <p>Kamera belum aktif</p>
+          </div>
+        </div>
+        <div class="scanner-controls">
+          <button type="button" id="btn-scan-toggle" class="btn btn-primary" onclick="PageSiswa.toggleScanner()">
+            <i data-lucide="camera"></i>
+            <span id="btn-scan-label">Nyalakan Kamera</span>
+          </button>
+        </div>
         <div id="scan-status" class="mt-4 text-center"></div>
       </div>
     </section>

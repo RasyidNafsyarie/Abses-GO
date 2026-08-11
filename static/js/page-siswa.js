@@ -1,6 +1,6 @@
 /* ============================================
    Absensi GO - Halaman Siswa
-   Scan QR / Manual / Riwayat (data dari API backend)
+   Scan QR (custom UI via Html5Qrcode), Manual, Riwayat
    ============================================ */
 (function () {
   "use strict";
@@ -10,6 +10,7 @@
   var NAME_KEY = "namaSiswa";
 
   var scanner = null;
+  var scanning = false;
   var currentNis = null;
   var currentNama = null;
 
@@ -49,44 +50,74 @@
     if (name === "riwayat") loadRiwayat();
   }
 
-  // ---------- Scanner QR ----------
+  // ---------- Scanner QR (custom UI) ----------
   function startScanner() {
-    if (scanner) return;
-    if (typeof Html5QrcodeScanner === "undefined") {
-      $("scan-status").innerHTML = '<span class="badge badge-danger">Library kamera gagal dimuat</span>';
+    var el = $("reader");
+    if (!el || scanning) return;
+
+    if (typeof Html5Qrcode === "undefined") {
+      setScanStatus("error", "Library kamera gagal dimuat");
       return;
     }
 
-    var el = $("reader");
-    el.innerHTML = "";
-
-    scanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-        qrbox: { width: 220, height: 220 },
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-      },
-      false
-    );
-    scanner.render(onScanSuccess, function () { /* scan failure - abaikan */ });
-  }
-
-  function stopScanner() {
-    if (scanner) {
-      try { scanner.clear(); } catch (e) { /* noop */ }
-      scanner = null;
+    try {
+      el.innerHTML = "";
+      scanner = new Html5Qrcode("reader");
+      setScanStatus("", "");
+      setScannerUi(false);
+    } catch (e) {
+      setScanStatus("error", "Gagal menginisialisasi kamera");
     }
   }
 
+  function toggleScanner() {
+    if (!scanner) startScanner();
+    if (!scanner) return;
+
+    if (scanning) {
+      stopScanner();
+    } else {
+      setScanStatus("", "");
+      scanner
+        .start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          onScanSuccess,
+          function () {}
+        )
+        .then(function () {
+          scanning = true;
+          setScannerUi(true);
+        })
+        .catch(function (err) {
+          setScanStatus("error", "Kamera tidak bisa diakses: " + (err && err.message ? err.message : err));
+          setScannerUi(false);
+        });
+    }
+  }
+
+  function stopScanner() {
+    if (scanner && scanning) {
+      try { scanner.stop(); } catch (e) { /* noop */ }
+      scanning = false;
+    }
+    setScannerUi(false);
+  }
+
+  function setScannerUi(active) {
+    var label = $("btn-scan-label");
+    var placeholder = $("scanner-placeholder");
+    if (label) label.textContent = active ? "Matikan Kamera" : "Nyalakan Kamera";
+    if (placeholder) placeholder.classList.toggle("hidden", active);
+  }
+
   function onScanSuccess(decodedText) {
-    // Scanner lama mengecek prefiks ABSENSI-. Di sini kami hanya menerima NIS (digit).
     var nis = String(decodedText || "").trim();
     if (nis.indexOf("ABSENSI-") === 0) {
       nis = nis.replace("ABSENSI-", "").split("-")[0];
     }
     if (!nis || !/^\d+$/.test(nis)) {
-      $("scan-status").innerHTML = '<span class="badge badge-danger">QR tidak valid</span>';
+      setScanStatus("danger", "QR tidak valid");
       return;
     }
     kirimAbsen(nis);
@@ -94,8 +125,7 @@
 
   // ---------- Absen ----------
   function kirimAbsen(nis) {
-    var status = $("scan-status");
-    status.innerHTML = '<span class="badge badge-info">Memproses absen...</span>';
+    setScanStatus("info", "Memproses absen...");
 
     fetch("/scan-absen", {
       method: "POST",
@@ -105,26 +135,35 @@
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data.status === "success") {
-          status.innerHTML = '<span class="badge badge-success">' + (data.message || "Absen berhasil") + "</span>";
-          setTimeout(function () { status.innerHTML = ""; }, 4000);
-          if (currentTabIs("riwayat")) loadRiwayat();
+          setScanStatus("success", data.message || "Absen berhasil");
         } else if (data.status === "conflict") {
-          status.innerHTML = '<span class="badge badge-warning">' + (data.message || "Sudah absen hari ini") + "</span>";
-          setTimeout(function () { status.innerHTML = ""; }, 4000);
+          setScanStatus("warning", data.message || "Sudah absen hari ini");
         } else {
-          status.innerHTML = '<span class="badge badge-danger">' + (data.message || "Gagal absen") + "</span>";
-          setTimeout(function () { status.innerHTML = ""; }, 4000);
+          setScanStatus("danger", data.message || "Gagal absen");
         }
+        if (currentTabIs("riwayat")) loadRiwayat();
       })
       .catch(function () {
-        status.innerHTML = '<span class="badge badge-danger">Gagal menghubungi server</span>';
-        setTimeout(function () { status.innerHTML = ""; }, 4000);
+        setScanStatus("danger", "Gagal menghubungi server");
       });
+  }
+
+  function setScanStatus(type, message) {
+    var el = $("scan-status");
+    if (!el) return;
+    if (!type) {
+      el.innerHTML = "";
+      return;
+    }
+    var badges = { info: "info", success: "success", warning: "warning", danger: "danger" };
+    el.innerHTML = '<span class="badge badge-' + (badges[type] || "neutral") + '">' + message + "</span>";
+    if (type !== "info") {
+      setTimeout(function () { el.innerHTML = ""; }, 4000);
+    }
   }
 
   function absenManual() {
     if (!currentNis) return;
-    // Manual = absen untuk akun yang login
     fetch("/scan-absen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -201,5 +240,10 @@
     startScanner();
   });
 
-  window.PageSiswa = { showTab: showTab, absenManual: absenManual, logout: logout };
+  window.PageSiswa = {
+    showTab: showTab,
+    toggleScanner: toggleScanner,
+    absenManual: absenManual,
+    logout: logout
+  };
 })();
