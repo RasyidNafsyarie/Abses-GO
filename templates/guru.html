@@ -42,6 +42,9 @@
       <button class="tab" role="tab" id="tab-semua" aria-selected="false" onclick="PageGuru.showTab('semua')">
         <i data-lucide="database"></i> Semua Riwayat
       </button>
+      <button class="tab" role="tab" id="tab-wajah" aria-selected="false" onclick="PageGuru.showTab('wajah')">
+        <i data-lucide="scan-face"></i> Kelola Wajah
+      </button>
     </nav>
 
     <!-- QR Generator -->
@@ -152,6 +155,39 @@
             </tr>
           </thead>
           <tbody id="tbody-semua">
+            <tr><td colspan="6" class="empty">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Kelola Wajah -->
+    <section id="panel-wajah" class="card fade-in hidden">
+      <div class="card-header flex-between">
+        <h2>Status Verifikasi Wajah</h2>
+        <button class="btn btn-secondary btn-sm" onclick="PageGuru.loadWajah()">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="mb-4">
+          Reset data wajah jika siswa perlu mengatur ulang (wajah berubah / lupa).
+          Setelah direset, siswa akan diminta menyetel wajah saat login berikutnya.
+        </p>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>NIS</th>
+              <th>Nama</th>
+              <th>Kelas</th>
+              <th>Status Wajah</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-wajah">
             <tr><td colspan="6" class="empty">Memuat data...</td></tr>
           </tbody>
         </table>

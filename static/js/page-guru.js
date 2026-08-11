@@ -28,7 +28,7 @@
 
   // ---------- Tabs ----------
   function showTab(name) {
-    var tabs = ["qr", "today", "cari", "semua"];
+    var tabs = ["qr", "today", "cari", "semua", "wajah"];
     tabs.forEach(function (t) {
       $("tab-" + t).setAttribute("aria-selected", String(t === name));
       $("panel-" + t).classList.toggle("hidden", t !== name);
@@ -36,6 +36,7 @@
     if (name === "qr") startQRTimers();
     if (name === "today") loadToday();
     if (name === "semua") loadSemua();
+    if (name === "wajah") loadWajah();
   }
 
   // ---------- QR ----------
@@ -179,6 +180,65 @@
       });
   }
 
+  // ---------- Kelola Wajah ----------
+  function loadWajah() {
+    var tbody = $("tbody-wajah");
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Memuat data...</td></tr>';
+
+    fetch("/api/face/list")
+      .then(function (res) { return res.json(); })
+      .then(function (result) {
+        if (!result.success) throw new Error(result.message || "Gagal");
+        var list = result.data || [];
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty">Tidak ada siswa terdaftar</td></tr>';
+          return;
+        }
+        tbody.innerHTML = "";
+        list.forEach(function (item, i) {
+          var hasFace = item.has_face === true || item.has_face === 1;
+          var badge = hasFace
+            ? '<span class="badge badge-success">Tersimpan</span>'
+            : '<span class="badge badge-warning">Belum</span>';
+          var action = hasFace
+            ? '<button class="btn btn-danger btn-sm" onclick="PageGuru.resetWajah(\'' + item.NIS + '\')">Reset</button>'
+            : '<span class="muted" style="font-size:0.8rem;">—</span>';
+          var tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + (i + 1) + "</td>" +
+            "<td>" + (item.NIS || "-") + "</td>" +
+            "<td>" + (item.Nama || "-") + "</td>" +
+            "<td>" + (item.Kelas || "-") + "</td>" +
+            "<td>" + badge + "</td>" +
+            "<td>" + action + "</td>";
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(function () {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Gagal memuat status wajah</td></tr>';
+      });
+  }
+
+  function resetWajah(nis) {
+    if (!confirm("Reset verifikasi wajah untuk NIS " + nis + "? Siswa akan menyetel ulang saat login.")) return;
+
+    fetch("/api/face/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nis: nis })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.success) {
+          UI.toast("success", data.message || "Wajah direset");
+          loadWajah();
+        } else {
+          UI.toast("error", data.message || "Gagal reset");
+        }
+      })
+      .catch(function () { UI.toast("error", "Gagal menghubungi server"); });
+  }
+
   // ---------- Logout ----------
   function logout() {
     if (qrTimer) clearInterval(qrTimer);
@@ -195,5 +255,13 @@
     loadToday();
   });
 
-  window.PageGuru = { showTab: showTab, refreshQR: refreshQR, loadToday: loadToday, cari: cari, logout: logout };
+  window.PageGuru = {
+    showTab: showTab,
+    refreshQR: refreshQR,
+    loadToday: loadToday,
+    cari: cari,
+    loadWajah: loadWajah,
+    resetWajah: resetWajah,
+    logout: logout
+  };
 })();

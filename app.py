@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 import socket
 import ssl
 from werkzeug.serving import make_ssl_devcert
-from database import connect_db, insert_absen, get_siswa, get_guru, get_today_absen, get_siswa_by_nis, get_absen_by_nis, get_all_absen
+from database import connect_db, insert_absen, get_siswa, get_guru, get_today_absen, get_siswa_by_nis, get_absen_by_nis, get_all_absen, save_face_data, get_face_data, has_face_data, delete_face_data, get_all_face_status
 
 # Load variabel dari file .env (jika ada)
 load_dotenv()
@@ -359,10 +359,13 @@ def login_guru():
 
         guru = get_guru(username, password)
         if guru:
+            guru_user = guru.get('Username') or guru.get('username')
+            # Simpan sesi guru agar halaman/API guru terproteksi
+            session['guru'] = guru_user
             return jsonify({
                 "success": True,
                 "message": "Login guru berhasil",
-                "user": guru.get('Username') or guru.get('username')
+                "user": guru_user
             })
         else:
             return jsonify({"error": "Username atau password salah"}), 401
@@ -386,6 +389,165 @@ def get_history_guru_today():
     except Exception as e:
         print(f"[ERROR] {e}")
         return jsonify({"success": False, "message": "Gagal ambil data"}), 500
+
+# ============================================
+# FACE RECOGNITION - Verifikasi Wajah
+# ============================================
+
+def _face_json(descriptor):
+    """Normalisasi descriptor dari JSON string atau list."""
+    if isinstance(descriptor, (list, dict)):
+        return descriptor
+    if isinstance(descriptor, str):
+        try:
+            return json.loads(descriptor)
+        except Exception:
+            return None
+    return None
+
+def _face_distance(a, b):
+    """Euclidean distance antara dua descriptor 128-d."""
+    try:
+        a = list(a)
+        b = list(b)
+        if len(a) != len(b) or len(a) == 0:
+            return None
+        return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+    except Exception:
+        return None
+
+FACE_THRESHOLD = float(os.getenv('FACE_THRESHOLD', '0.5'))
+
+@app.route('/api/face/status', methods=['GET'])
+def face_status():
+    """Cek apakah akun siswa yang login sudah punya data wajah."""
+    nis = session.get('nis')
+    if not nis:
+        return jsonify({"success": False, "message": "Tidak dalam sesi siswa"}), 401
+    return jsonify({
+        "success": True,
+        "nis": nis,
+        "has_face": has_face_data(nis)
+    }), 200
+
+@app.route('/api/face/register', methods=['POST'])
+def face_register():
+    """Simpan data wajah milik siswa yang login (enrollment mandiri)."""
+    nis = session.get('nis')
+    if not nis:
+        return jsonify({"success": False, "message": "Tidak dalam sesi siswa"}), 401
+
+    try:
+        data = request.get_json(silent=True) or {}
+        descriptor = _face_json(data.get('descriptor'))
+        if not descriptor or not isinstance(descriptor, list) or len(descriptor) < 100:
+            return jsonify({"success": False, "message": "Descriptor wajah tidak valid"}), 400
+
+        foto_path = None
+        if data.get('foto'):
+            # Simpan foto sebagai file (base64) untuk audit
+            try:
+                import base64
+                raw = data['foto'].split(',')[-1]
+                img_bytes = base64.b64decode(raw)
+                os.makedirs('data/faces', exist_ok=True)
+                fname = f"{nis}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                fpath = os.path.join('data', 'faces', fname)
+                with open(fpath, 'wb') as f:
+                    f.write(img_bytes)
+                foto_path = fpath
+            except Exception as e:
+                print(f"[FACE] Gagal simpan foto: {e}")
+
+        if save_face_data(nis, descriptor, foto_path):
+            return jsonify({"success": True, "message": "Verifikasi wajah tersimpan"}), 200
+        return jsonify({"success": False, "message": "Gagal menyimpan data wajah"}), 500
+    except Exception as e:
+        print(f"[FACE] Error register: {e}")
+        return jsonify({"success": False, "message": "Terjadi kesalahan server"}), 500
+
+@app.route('/api/face/descriptors', methods=['GET'])
+def face_descriptors():
+    """Ambil descriptor wajah untuk NIS yang login (untuk matching di browser)."""
+    nis = session.get('nis')
+    if not nis:
+        return jsonify({"success": False, "message": "Tidak dalam sesi siswa"}), 401
+
+    row = get_face_data(nis)
+    if not row or not row.get('descriptor'):
+        return jsonify({"success": False, "message": "Belum ada data wajah"}), 404
+
+    return jsonify({
+        "success": True,
+        "nis": nis,
+        "descriptor": row['descriptor']
+    }), 200
+
+@app.route('/api/face/verify', methods=['POST'])
+def face_verify():
+    """Validasi ekstra: cocokkan descriptor hasil capture dengan data tersimpan."""
+    nis = session.get('nis')
+    if not nis:
+        return jsonify({"success": False, "message": "Tidak dalam sesi siswa"}), 401
+
+    try:
+        data = request.get_json(silent=True) or {}
+        descriptor = _face_json(data.get('descriptor'))
+        if not descriptor:
+            return jsonify({"success": False, "message": "Descriptor wajah tidak valid"}), 400
+
+        row = get_face_data(nis)
+        if not row or not row.get('descriptor'):
+            return jsonify({"success": False, "message": "Belum ada data wajah"}), 404
+
+        stored = row['descriptor']
+        # Data tersimpan bisa berupa list of frames (ambil rata-rata/best) atau satu list
+        candidates = stored if isinstance(stored, list) and stored and isinstance(stored[0], list) else [stored]
+
+        best = None
+        for cand in candidates:
+            d = _face_distance(descriptor, cand)
+            if d is not None and (best is None or d < best):
+                best = d
+
+        verified = best is not None and best <= FACE_THRESHOLD
+        return jsonify({
+            "success": True,
+            "verified": verified,
+            "distance": best,
+            "threshold": FACE_THRESHOLD
+        }), 200
+    except Exception as e:
+        print(f"[FACE] Error verify: {e}")
+        return jsonify({"success": False, "message": "Terjadi kesalahan server"}), 500
+
+@app.route('/api/face/reset', methods=['POST'])
+def face_reset():
+    """Hapus data wajah siswa (auth guru) agar siswa re-enroll."""
+    if not session.get('guru'):
+        return jsonify({"success": False, "message": "Akses khusus guru"}), 403
+
+    try:
+        data = request.get_json(silent=True) or {}
+        nis = data.get('nis')
+        if not nis:
+            return jsonify({"success": False, "message": "NIS wajib diisi"}), 400
+
+        if delete_face_data(nis):
+            return jsonify({"success": True, "message": f"Data wajah NIS {nis} direset"}), 200
+        return jsonify({"success": False, "message": "Gagal reset data wajah"}), 500
+    except Exception as e:
+        print(f"[FACE] Error reset: {e}")
+        return jsonify({"success": False, "message": "Terjadi kesalahan server"}), 500
+
+@app.route('/api/face/list', methods=['GET'])
+def face_list():
+    """Status wajah semua siswa (auth guru)."""
+    if not session.get('guru'):
+        return jsonify({"success": False, "message": "Akses khusus guru"}), 403
+
+    data = get_all_face_status()
+    return jsonify({"success": True, "data": data}), 200
 
 # Fungsi-fungsi ini didefinisikan di sini dalam file lama Anda.
 # Idealnya, fungsi-fungsi ini seharusnya hanya ada di `database.py`.

@@ -156,3 +156,110 @@ def get_guru(username, password):
     result = cursor.fetchone()
     conn.close()
     return result
+
+# --- FUNGSI FACE DATA (verifikasi wajah) ---
+
+def save_face_data(nis, descriptor, foto_path=None):
+    """Simpan (atau timpa) data wajah untuk satu NIS."""
+    conn = connect_db("dbsekolah")
+    if not conn:
+        return False
+
+    cursor = conn.cursor()
+    try:
+        import json as _json
+        sql = """
+            INSERT INTO face_data (nis, descriptor, foto_path)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                descriptor = VALUES(descriptor),
+                foto_path = VALUES(foto_path),
+                updated_at = CURRENT_TIMESTAMP
+        """
+        cursor.execute(sql, (nis, _json.dumps(descriptor), foto_path))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[DATABASE] ❌ Gagal simpan face_data: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+
+def get_face_data(nis):
+    """Ambil data wajah untuk satu NIS (descriptor di-parse dari JSON)."""
+    conn = connect_db("dbsekolah")
+    if not conn:
+        return None
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM face_data WHERE nis = %s", (nis,))
+        row = cursor.fetchone()
+        if row and row.get("descriptor"):
+            import json as _json
+            try:
+                row["descriptor"] = _json.loads(row["descriptor"])
+            except Exception:
+                row["descriptor"] = None
+        return row
+    except Exception as e:
+        print(f"[DATABASE] ❌ Gagal ambil face_data: {e}")
+        return None
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+
+def has_face_data(nis):
+    """Cek apakah sebuah NIS sudah punya data wajah."""
+    row = get_face_data(nis)
+    return bool(row and row.get("descriptor"))
+
+def delete_face_data(nis):
+    """Hapus data wajah untuk satu NIS (re-enroll)."""
+    conn = connect_db("dbsekolah")
+    if not conn:
+        return False
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM face_data WHERE nis = %s", (nis,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[DATABASE] ❌ Gagal hapus face_data: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+
+def get_all_face_status():
+    """Ambil status wajah semua siswa (untuk halaman kelola guru)."""
+    conn = connect_db("dbsekolah")
+    if not conn:
+        return []
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        query = """
+            SELECT s.NIS, s.Nama, s.Kelas, s.Jurusan,
+                   (fd.id IS NOT NULL) AS has_face,
+                   fd.updated_at AS face_updated_at
+            FROM siswa s
+            LEFT JOIN face_data fd ON fd.nis = s.NIS
+            ORDER BY s.Nama ASC
+        """
+        cursor.execute(query)
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"[DATABASE] ❌ Gagal ambil status wajah: {e}")
+        return []
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()

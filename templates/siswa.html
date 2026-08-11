@@ -4,6 +4,7 @@
 
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='js/face-api.min.js') }}?v=2"></script>
 {% endblock %}
 
 {% block body %}
@@ -29,9 +30,43 @@
       <p id="info-siswa">—</p>
     </div>
 
-    <nav class="tabs" role="tablist" aria-label="Menu siswa">
+    <!-- Onboarding: atur verifikasi wajah (muncul jika belum punya data wajah) -->
+    <section id="panel-enroll" class="card fade-in hidden">
+      <div class="card-header">
+        <h2>Atur Verifikasi Wajah</h2>
+        <span class="badge badge-warning">Diperlukan sekali</span>
+      </div>
+      <div class="card-body">
+        <p class="mb-4">
+          Data wajah Anda dipakai untuk verifikasi sebelum scan QR absen.
+          Wajah tersimpan secara lokal di sistem sekolah (tidak dikirim ke pihak lain).
+          Jika kamera tidak tersedia, gunakan tab <strong>Manual</strong> sebagai alternatif.
+        </p>
+        <div class="scanner-frame" id="enroll-frame">
+          <video id="enroll-video" class="scanner-video" autoplay muted playsinline></video>
+          <div class="scanner-placeholder" id="enroll-placeholder">
+            <i data-lucide="camera-off"></i>
+            <p>Kamera belum aktif</p>
+          </div>
+        </div>
+        <div id="enroll-status" class="mt-4 text-center"></div>
+        <div class="scanner-controls">
+          <button type="button" id="btn-enroll-start" class="btn btn-primary" onclick="PageSiswa.startEnroll()">
+            <i data-lucide="camera"></i> Mulai Pengambilan
+          </button>
+          <button type="button" id="btn-enroll-save" class="btn btn-success hidden" onclick="PageSiswa.saveEnroll()">
+            <i data-lucide="check"></i> Simpan Wajah
+          </button>
+          <button type="button" id="btn-enroll-flip" class="btn btn-secondary hidden" onclick="PageSiswa.flipEnroll()">
+            <i data-lucide="refresh-cw"></i> Putar Kamera
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="Menu siswa" id="main-tabs">
       <button class="tab" role="tab" id="tab-scan" aria-selected="true" onclick="PageSiswa.showTab('scan')">
-        <i data-lucide="scan-line"></i> Scan QR
+        <i data-lucide="scan-line"></i> Absen
       </button>
       <button class="tab" role="tab" id="tab-manual" aria-selected="false" onclick="PageSiswa.showTab('manual')">
         <i data-lucide="keyboard"></i> Manual
@@ -41,27 +76,52 @@
       </button>
     </nav>
 
-    <!-- Scan QR -->
+    <!-- Absen: langkah 1 verifikasi wajah, langkah 2 scan QR -->
     <section id="panel-scan" class="card fade-in">
       <div class="card-header">
-        <h2>Scan QR Code</h2>
-        <span class="badge badge-neutral">Kamera</span>
+        <h2>Absen</h2>
+        <span class="badge badge-neutral" id="scan-step-badge">Langkah 1 dari 2</span>
       </div>
-      <div class="scanner-box">
-        <div class="scanner-frame" id="scanner-frame">
-          <div id="reader" class="scanner-video"></div>
-          <div class="scanner-placeholder" id="scanner-placeholder">
+
+      <!-- Step 1: verifikasi wajah -->
+      <div id="step-verify" class="card-body">
+        <p class="mb-4">Langkah 1 — Verifikasi wajah Anda terlebih dahulu.</p>
+        <div class="scanner-frame" id="verify-frame">
+          <video id="verify-video" class="scanner-video" autoplay muted playsinline></video>
+          <div class="scanner-placeholder" id="verify-placeholder">
             <i data-lucide="camera-off"></i>
             <p>Kamera belum aktif</p>
           </div>
         </div>
+        <div id="verify-status" class="mt-4 text-center"></div>
+        <div class="scanner-controls">
+          <button type="button" id="btn-verify-start" class="btn btn-primary" onclick="PageSiswa.startVerify()">
+            <i data-lucide="camera"></i>
+            <span id="btn-verify-label">Nyalakan Kamera</span>
+          </button>
+          <button type="button" id="btn-verify-flip" class="btn btn-secondary hidden" onclick="PageSiswa.flipVerify()">
+            <i data-lucide="refresh-cw"></i> Putar Kamera
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: scan QR -->
+      <div id="step-qr" class="card-body hidden">
+        <p class="mb-4">Langkah 2 — Arahkan kamera ke QR Code di layar guru.</p>
+        <div class="scanner-frame">
+          <div id="reader" class="scanner-video"></div>
+          <div class="scanner-placeholder" id="qr-placeholder">
+            <i data-lucide="qrcode"></i>
+            <p>Kamera QR belum aktif</p>
+          </div>
+        </div>
+        <div id="scan-status" class="mt-4 text-center"></div>
         <div class="scanner-controls">
           <button type="button" id="btn-scan-toggle" class="btn btn-primary" onclick="PageSiswa.toggleScanner()">
             <i data-lucide="camera"></i>
             <span id="btn-scan-label">Nyalakan Kamera</span>
           </button>
         </div>
-        <div id="scan-status" class="mt-4 text-center"></div>
       </div>
     </section>
 
@@ -104,5 +164,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/face.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page-siswa.js') }}"></script>
 {% endblock %}
